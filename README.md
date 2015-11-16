@@ -2,7 +2,7 @@
 ### **Kube Cover**
 ---
 
-**Kube Cover** is a short-term hack to enable security policies via the Kuberneres API. Presently, items such as privileged, host network, host, pid/ipc, host port range and docker capabilities are difficult or in some cases impossible to enforce a security policy. Kube Cover provide's a stepping stone into using  those policies while we wait for the kubernetes project to resolve and release them. Note, the actually policies are based on a PR released into Openshift Origin
+**Kube Cover** is a short-term hack to enable security policies via the Kubernetes API. Presently, items such as privileged, host network, host, pid/ipc, host port range and docker capabilities are difficult or in some cases impossible to enforce a security policy. Kube Cover provide's a stepping stone into using  those policies while we wait for the kubernetes project to resolve and release them. Note, the actually policies are based on a PR released into Openshift Origin
 
 
 ##### **Usage**
