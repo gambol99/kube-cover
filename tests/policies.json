@@ -1,0 +1,30 @@
+{
+  "kind": "PodSecurityPolicyList",
+  "apiVersion": "v1",
+  "items": [
+    {
+      "kind": "PodSecurityPolicy",
+      "version": "v1",
+      "namespaces": [
+        "*"
+      ],
+      "spec": {
+        "privileged" : false,
+        "hostNetwork" : false,
+        "hostPID": false,
+        "hostIPC": false,
+        "volumes": {
+          "hostPath": true,
+          "hostPathAllowed": [
+            "/var/data"
+          ],
+          "emptyDir": true,
+          "gitRepo": true,
+          "secret": true,
+          "rbd": true,
+          "downwardAPI": true
+        }
+      }
+    }
+  ]
+}

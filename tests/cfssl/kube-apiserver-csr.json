@@ -1,0 +1,21 @@
+{
+  "CN": "*.example.com",
+  "hosts": [
+    "localhost",
+    "127.0.0.1",
+    "*.example.com"
+  ],
+  "key": {
+   "algo": "rsa",
+   "size": 2048
+  },
+  "names": [
+    {
+      "C": "GB",
+      "L": "London",
+      "O": "Example Company",
+      "OU": "Kubernetes API Server",
+      "ST": "London"
+    }
+  ]
+}
