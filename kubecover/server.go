@@ -23,12 +23,13 @@ import (
 	"net/url"
 
 	"github.com/gambol99/kube-cover/policy"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
 )
 
-// KewKubeCover
-func KewKubeCover(upstream, policyPath string) (*KubeCover, error) {
+// NewKubeCover creates a new kube cover service
+func NewKubeCover(upstream, policyPath string) (*KubeCover, error) {
 
 	service := new(KubeCover)
 	// step: parse and validate the upstreams
@@ -41,7 +42,7 @@ func KewKubeCover(upstream, policyPath string) (*KubeCover, error) {
 	glog.Infof("kubernetes api: %s", service.upstream.String())
 
 	// step: create the policy controller
-	acl, err := policy.NewPolicyController(policyPath)
+	acl, err := policy.NewController(policyPath)
 	if err != nil {
 		return nil, err
 	}

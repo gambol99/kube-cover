@@ -35,7 +35,7 @@ func main() {
 	glog.Infof("initializing kube cover service, version: %s", version)
 
 	// step: create the kube cover service
-	cover, err := kubecover.KewKubeCover(config.upstreamURL, config.policyFile)
+	cover, err := kubecover.NewKubeCover(config.upstreamURL, config.policyFile)
 	if err != nil {
 		printUsage(err.Error())
 	}

@@ -140,14 +140,14 @@ type SELinuxContextStrategyOptions struct {
 	SELinuxOptions *api.SELinuxOptions `json:"seLinuxOptions,omitempty"`
 }
 
-// SELinuxContextStrategyType denotes strategy types for generating SELinux options for a
+// SELinuxContextStrategy denotes strategy types for generating SELinux options for a
 // SecurityContext.
 type SELinuxContextStrategy string
 
 const (
-	// container must have SELinux labels of X applied.
+	// SELinuxStrategyMustRunAs container must have SELinux labels of X applied.
 	SELinuxStrategyMustRunAs SELinuxContextStrategy = "MustRunAs"
-	// container may make requests for any SELinux context labels.
+	// SELinuxStrategyRunAsAny container may make requests for any SELinux context labels.
 	SELinuxStrategyRunAsAny SELinuxContextStrategy = "RunAsAny"
 )
 
@@ -164,18 +164,18 @@ type RunAsUserStrategyOptions struct {
 	UIDRangeMax *int64 `json:"uidRangeMax,omitempty"`
 }
 
-// RunAsUserStrategyType denotes strategy types for generating RunAsUser values for a
+// RunAsUserStrategy denotes strategy types for generating RunAsUser values for a
 // SecurityContext.
 type RunAsUserStrategy string
 
 const (
-	// container must run as a particular uid.
+	// RunAsUserStrategyMustRunAs container must run as a particular uid.
 	RunAsUserStrategyMustRunAs RunAsUserStrategy = "MustRunAs"
-	// container must run as a particular uid.
+	// RunAsUserStrategyMustRunAsRange container must run as a particular uid.
 	RunAsUserStrategyMustRunAsRange RunAsUserStrategy = "MustRunAsRange"
-	// container must run as a non-root uid
+	// RunAsUserStrategyMustRunAsNonRoot container must run as a non-root uid
 	RunAsUserStrategyMustRunAsNonRoot RunAsUserStrategy = "MustRunAsNonRoot"
-	// container may make requests for any uid.
+	// RunAsUserStrategyRunAsAny container may make requests for any uid.
 	RunAsUserStrategyRunAsAny RunAsUserStrategy = "RunAsAny"
 )
 

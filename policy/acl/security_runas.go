@@ -19,6 +19,7 @@ package acl
 
 import "k8s.io/kubernetes/pkg/api"
 
+// Conflicts validate the runas pod specification does not violate the security policies
 func (r RunAsUserStrategyOptions) Conflicts(runas *api.SecurityContext) error {
 
 	return nil

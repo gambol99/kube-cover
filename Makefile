@@ -59,7 +59,7 @@ lint:
 	@which golint 2>/dev/null ; if [ $$? -eq 1 ]; then \
 		go get -u github.com/golang/lint/golint; \
 	fi
-	@golint .
+	@golint ./...
 
 format:
 	@echo "--> Running go fmt"

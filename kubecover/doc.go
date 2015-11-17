@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	Request_Unauthorized = "unauthorized"
-	HeaderConnection     = "Connection"
-	HeaderUpgrade        = "Upgrade"
+	requestUnauthorized = "unauthorized"
+	headerConnection    = "Connection"
+	headerUpgrade       = "Upgrade"
 )
 
 // KubeCover is the proxy service
@@ -43,5 +43,5 @@ type KubeCover struct {
 	// the upstream endpoint
 	upstreamEndpoint string
 	// the policy enforcer
-	acl policy.PolicyController
+	acl policy.Controller
 }
