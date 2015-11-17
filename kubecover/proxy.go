@@ -18,13 +18,7 @@ limitations under the License.
 package kubecover
 
 import (
-	"crypto/rand"
-	"crypto/tls"
-	"fmt"
-	"io"
-	"net"
 	"net/http"
-	"net/http/httputil"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -34,86 +28,58 @@ import (
 // proxyHandler proxies the request on to the upstream endpoint
 func (r *KubeCover) proxyHandler(cx *gin.Context) {
 	// step: has the request been flagged as unauthorized?
-	_, authorized := cx.Get(REQUEST_UNAUTHORIZED)
+	_, authorized := cx.Get(Request_Unauthorized)
 	if authorized {
 		return
 	}
 
-	// step: does the connection need upgrading?
-	if cx.Request.Header.Get("Upgrade") != "" {
-		if err := r.hijackRequest(cx); err != nil {
-			glog.Errorf("unable to upgrade the connetcion, %s", err)
+	// step: is this connection upgrading?
+	if isUpgradedConnection(cx.Request) {
+		glog.V(10).Infof("upgrading the connnection to %s", cx.Request.Header.Get("Upgrade"))
+		if err := r.tryUpdateConnection(cx); err != nil {
+			glog.Errorf("unable to upgrade the connection, %s", err)
+			cx.AbortWithStatus(http.StatusInternalServerError)
+			return
 		}
+		cx.Abort()
+
 		return
 	}
 
-	// step: pass into the reverse proxy
+	glog.V(10).Infof("proxing the request")
+	// step: pass through to the reverse proxy
 	r.proxy.ServeHTTP(cx.Writer, cx.Request)
 }
 
-func (r *KubeCover) hijackRequest(cx *gin.Context) error {
-	cx.AbortWithStatus(http.StatusInternalServerError)
-	// step: attempt to hijack the request
-	hijack, ok := cx.Writer.(http.Hijacker)
-	if !ok {
-		return fmt.Errorf("unable to hijack the reqiest, hijacking not supported")
-	}
-
-	// step: we grab the underlining connection
-	clientConn, _, err := hijack.Hijack()
+// tryUpdateConnection attempt to upgrade the connection to a http pdy stream
+func (r *KubeCover) tryUpdateConnection(cx *gin.Context) error {
+	// step: dial the kubernetes endpoint
+	tlsConn, err := tryDialEndpoint(r.upstream)
 	if err != nil {
-		return fmt.Errorf("unable to hijack the underlining connection, %s", err)
+		return err
 	}
+	defer tlsConn.Close()
 
-	// step: a dial connection and create a connection to the sink
-	tcpConn, err := net.Dial("tcp", r.upstreamEndpoint)
+	// step: we need to hijack the underlining client connection
+	clientConn, _, err := cx.Writer.(http.Hijacker).Hijack()
 	if err != nil {
-		return fmt.Errorf("unable to dial the upstream endpoint, %s", err)
-	}
-	cf := &tls.Config{
-		Rand:               rand.Reader,
-		InsecureSkipVerify: true,
-	}
-	ssl := tls.Client(tcpConn, cf)
 
-	url := fmt.Sprintf("%s://%s%s", r.upstream.Scheme, r.upstream.Host, cx.Request.URL.String())
+	}
+	defer clientConn.Close()
 
-	req, err := http.NewRequest(cx.Request.Method, url, cx.Request.Body)
-	if err != nil {
-		return fmt.Errorf("unable to create the request, %s", err)
+	// step: write the request to upstream
+	if err = cx.Request.Write(tlsConn); err != nil {
+		return err
 	}
 
-	req.Header = cx.Request.Header
-
-	server := httputil.NewClientConn(ssl, nil)
-	if err != nil {
-		return fmt.Errorf("unable to write the request upstream, %s", err)
-	}
-	_, err = server.Do(req)
-	if err != nil {
-		return fmt.Errorf("unable to perform request, %s", err)
-	}
-	// step: hijack the response
-	serverConn, _ := server.Hijack()
-
+	// step: copy the date between client and upstream endpoint
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go transferBytes(clientConn, serverConn, &wg)
-	go transferBytes(serverConn, clientConn, &wg)
+	go transferBytes(tlsConn, clientConn, &wg)
+	go transferBytes(clientConn, tlsConn, &wg)
 	wg.Wait()
 
-	return nil
-}
+	glog.V(10).Infof("closing the http stream from upstream and client")
 
-func transferBytes(src io.Reader, dest io.Writer, wg *sync.WaitGroup) (int64, error) {
-	defer wg.Done()
-	glog.V(10).Info("coping data")
-	copied, err := io.Copy(dest, src)
-	if err != nil {
-		glog.Errorf("unable to transfer byte, error: %s", err)
-		return copied, err
-	}
-	src.(net.Conn).Close()
-	dest.(net.Conn).Close()
-	return copied, nil
+	return nil
 }

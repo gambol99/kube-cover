@@ -25,20 +25,20 @@ import (
 	"github.com/gambol99/kube-cover/policy"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
-	"strings"
 )
 
+// KewKubeCover
 func KewKubeCover(upstream, policyPath string) (*KubeCover, error) {
-	glog.Infof("create a new kube cover service")
-	service := new(KubeCover)
 
+	service := new(KubeCover)
 	// step: parse and validate the upstreams
-	location, url, err := validateUpstream(upstream)
+	location, err := url.Parse(upstream)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid upstrem url, %s", err)
 	}
 	service.upstream = location
-	service.upstreamEndpoint = url
+
+	glog.Infof("kubernetes api: %s", service.upstream.String())
 
 	// step: create the policy controller
 	acl, err := policy.NewPolicyController(policyPath)
@@ -73,30 +73,6 @@ func KewKubeCover(upstream, policyPath string) (*KubeCover, error) {
 	service.proxy.Transport = buildTransport()
 
 	return service, nil
-}
-
-// validateUpstream validates the upstream endpoint for kubernetes
-func validateUpstream(upstream string) (*url.URL, string, error) {
-	var endpoint string
-
-	// step: parse the url
-	location, err := url.Parse(upstream)
-	if err != nil {
-		return nil, endpoint, fmt.Errorf("invalid upstrem url, %s", err)
-	}
-	endpoint = location.Host
-
-	// we only accept https endpoints
-	if location.Scheme != "https" {
-		return nil, endpoint, fmt.Errorf("the upstream endpoint must be https")
-	}
-
-	items := strings.Split(location.Host, ":")
-	if len(items) <= 0 {
-		endpoint = fmt.Sprintf("%s:%d", location.Host, 443)
-	}
-
-	return location, endpoint, nil
 }
 
 // Run start the gin engine and begins serving content

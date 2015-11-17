@@ -18,9 +18,16 @@ limitations under the License.
 package kubecover
 
 import (
+	"crypto/rand"
 	"crypto/tls"
+	"github.com/golang/glog"
+	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -36,4 +43,79 @@ func buildTransport() *http.Transport {
 			InsecureSkipVerify: true,
 		},
 	}
+}
+
+// printRequest display the request
+func printRequest(req *http.Request) string {
+	content, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		return ""
+	}
+
+	return string(content)
+}
+
+// isUpgradedConnection checks to see if the request is requesting
+func isUpgradedConnection(req *http.Request) bool {
+	if req.Header.Get(HeaderUpgrade) != "" {
+		return true
+	}
+
+	return false
+}
+
+// tryDialEndpoint dials the upstream endpoint via plain
+func tryDialEndpoint(location *url.URL) (net.Conn, error) {
+	glog.V(10).Infof("attempting to dial: %s", location.String())
+	// get the dial address
+	dialAddr := dialAddress(location)
+
+	switch location.Scheme {
+	case "http":
+		glog.V(10).Infof("connecting the http endpoint: %s", dialAddr)
+		conn, err := net.Dial("tcp", dialAddr)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	default:
+		glog.V(10).Infof("connecting to tls endpoint: %s", dialAddr)
+		// step: construct and dial a tls endpoint
+		conn, err := tls.Dial("tcp", dialAddr, &tls.Config{
+			Rand:               rand.Reader,
+			InsecureSkipVerify: true,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		return conn, nil
+	}
+}
+
+// dialAddress extracts the dial address from the url
+func dialAddress(location *url.URL) string {
+	items := strings.Split(location.Host, ":")
+	if len(items) != 2 {
+		switch location.Scheme {
+		case "http":
+			return location.Host + ":80"
+		default:
+			return location.Host + ":443"
+		}
+	}
+
+	return location.Host
+}
+
+// transferBytes transfers bytes between the sink and source
+func transferBytes(src io.Reader, dest io.Writer, wg *sync.WaitGroup) (int64, error) {
+	defer wg.Done()
+	copied, err := io.Copy(dest, src)
+	if err != nil {
+		return copied, err
+	}
+
+	return copied, nil
 }

@@ -27,7 +27,9 @@ import (
 )
 
 const (
-	REQUEST_UNAUTHORIZED = "unauthorized"
+	Request_Unauthorized = "unauthorized"
+	HeaderConnection     = "Connection"
+	HeaderUpgrade        = "Upgrade"
 )
 
 // KubeCover is the proxy service

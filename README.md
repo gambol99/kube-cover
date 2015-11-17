@@ -100,7 +100,3 @@ At the moment the filter / matching for security policies is applied at a *names
 }
 ```
 
-##### **Todo**
-
-- Need to fixup the code for connection hijacking and permitting the **kubectl exec** command to work (this requires the connection is upgraded into a spdy stream).
-

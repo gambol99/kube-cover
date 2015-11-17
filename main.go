@@ -18,29 +18,40 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
 	"github.com/gambol99/kube-cover/kubecover"
+
+	"github.com/golang/glog"
 )
 
 func main() {
 	if err := parseConfig(); err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
-		os.Exit(1)
+		printUsage(err.Error())
 	}
+
+	glog.Infof("initializing kube cover service, version: %s", version)
 
 	// step: create the kube cover service
 	cover, err := kubecover.KewKubeCover(config.upstreamURL, config.policyFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create the kube cover, error: %s", err)
-		os.Exit(1)
+		printUsage(err.Error())
 	}
 
-	// step: being handling requests
+	// step: start handling requests
 	if err := cover.Run(config.bindInterface, config.certificateFile, config.privateKeyFile); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to start the kube cover, error: %s", err)
+		printUsage(err.Error())
+	}
+}
+
+// printUsage prints the usage menu
+func printUsage(message string) {
+	flag.PrintDefaults()
+	if message != "" {
+		fmt.Fprintf(os.Stderr, "[error] %s", message)
 		os.Exit(1)
 	}
-
+	os.Exit(1)
 }

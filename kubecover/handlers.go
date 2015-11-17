@@ -87,7 +87,7 @@ func (r KubeCover) unauthorizedRequest(cx *gin.Context, spec, message string) {
 	glog.Errorf("failing specification: %s", spec)
 
 	// step: inject the header
-	cx.Set(REQUEST_UNAUTHORIZED, true)
+	cx.Set(Request_Unauthorized, true)
 
 	cx.JSON(http.StatusNotAcceptable, gin.H{
 		"status":  "Failure",
