@@ -16,7 +16,7 @@ build:
 	mkdir -p bin
 	go build -o bin/${NAME}
 
-docker: static
+docker:
 	@echo "--> Building the docker image"
 	sudo docker build -t ${AUTHOR}/${NAME}:${VERSION} .
 
@@ -59,7 +59,7 @@ lint:
 	@which golint 2>/dev/null ; if [ $$? -eq 1 ]; then \
 		go get -u github.com/golang/lint/golint; \
 	fi
-	@golint .
+	@golint ./...
 
 format:
 	@echo "--> Running go fmt"

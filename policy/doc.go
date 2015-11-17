@@ -23,8 +23,8 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 )
 
-// PolicyController validate a pod
-type PolicyController interface {
+// Controller validate a pod specification against the security policies
+type Controller interface {
 	// validate a pod against the policies
 	Authorized(*acl.PolicyContext, *api.PodSpec) error
 }

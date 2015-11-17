@@ -24,6 +24,7 @@ import (
 	"strings"
 )
 
+// Conflicts validates the pod volumes does not violate the security policy
 func (r VolumeSecurityPolicy) Conflicts(volumes []api.Volume) error {
 	if len(volumes) <= 0 {
 		return nil

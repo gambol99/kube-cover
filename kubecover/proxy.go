@@ -28,7 +28,7 @@ import (
 // proxyHandler proxies the request on to the upstream endpoint
 func (r *KubeCover) proxyHandler(cx *gin.Context) {
 	// step: has the request been flagged as unauthorized?
-	_, authorized := cx.Get(Request_Unauthorized)
+	_, authorized := cx.Get(requestUnauthorized)
 	if authorized {
 		return
 	}

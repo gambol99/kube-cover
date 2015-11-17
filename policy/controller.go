@@ -35,8 +35,8 @@ type policyEnforcer struct {
 	policyLock sync.RWMutex
 }
 
-// NewPolicyController create a new policy controller, reading in the policies from the file
-func NewPolicyController(path string) (PolicyController, error) {
+// NewController create a new policy controller, reading in the policies from the file
+func NewController(path string) (Controller, error) {
 	// step: read in the policy file
 	glog.Infof("loading the policies file: %s", path)
 	policies, err := parsePolicyFile(path)

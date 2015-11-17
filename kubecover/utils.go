@@ -57,7 +57,7 @@ func printRequest(req *http.Request) string {
 
 // isUpgradedConnection checks to see if the request is requesting
 func isUpgradedConnection(req *http.Request) bool {
-	if req.Header.Get(HeaderUpgrade) != "" {
+	if req.Header.Get(headerUpgrade) != "" {
 		return true
 	}
 
