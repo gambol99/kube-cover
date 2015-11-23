@@ -66,6 +66,7 @@ func (r *policyEnforcer) Authorized(cx *acl.PolicyContext, pod *api.PodSpec) err
 		if err := p.Spec.Conflicts(pod); err != nil {
 			return err
 		}
+		break
 	}
 
 	return nil

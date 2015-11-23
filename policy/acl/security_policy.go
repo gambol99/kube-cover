@@ -17,7 +17,9 @@ limitations under the License.
 
 package acl
 
-import "github.com/gambol99/kube-cover/utils"
+import (
+	"github.com/gambol99/kube-cover/utils"
+)
 
 // Matches checks to see if the context matches the policy filter
 func (r PodSecurityPolicy) Matches(cx *PolicyContext) bool {

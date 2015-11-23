@@ -6,23 +6,63 @@
       "kind": "PodSecurityPolicy",
       "version": "v1",
       "namespaces": [
+        "platform"
+      ],
+      "spec": {
+        "privileged": true,
+        "volumes": {
+          "hostPath": true,
+          "awsElasticBlockStore": true,
+          "cephfs": true,
+          "downwardAPI": true,
+          "emptyDir": true,
+          "gitRepo": true,
+          "glusterfs": true,
+          "persistentVolumeClaim": true,
+          "rbd": true,
+          "secret": true
+        }
+      }
+    },
+    {
+      "kind": "PodSecurityPolicy",
+      "version": "v1",
+      "namespaces": [
+        "openvpn"
+      ],
+      "spec": {
+        "capabilities": [
+          "SYS_ADMIN",
+          "NET_ADMIN",
+          "MKNOD"
+        ],
+        "volumes": {
+          "hostPath": true,
+          "emptyDir": true,
+          "secret": true
+        }
+      }
+    },
+    {
+      "kind": "PodSecurityPolicy",
+      "version": "v1",
+      "namespaces": [
         "*"
       ],
       "spec": {
-        "privileged" : false,
-        "hostNetwork" : false,
-        "hostPID": false,
-        "hostIPC": false,
         "volumes": {
           "hostPath": true,
-          "hostPathAllowed": [
-            "/var/data"
-          ],
+          "awsElasticBlockStore": true,
+          "cinder": true,
+          "cephfs": true,
+          "downwardAPI": true,
           "emptyDir": true,
+          "fc": true,
           "gitRepo": true,
-          "secret": true,
+          "glusterfs": true,
+          "persistentVolumeClaim": true,
           "rbd": true,
-          "downwardAPI": true
+          "secret": true
         }
       }
     }
