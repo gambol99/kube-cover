@@ -27,7 +27,7 @@ push: docker
 static:
 	@echo "--> Compiling the static binary"
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags '-w' -o bin/${NAME}
+	CGO_ENABLED=0 GOOS=linux godep go build -a -tags netgo -ldflags '-w' -o bin/${NAME}
 
 release: static
 	mkdir -p release
