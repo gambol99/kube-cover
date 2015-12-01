@@ -14,15 +14,14 @@ default: build
 build:
 	@echo "--> Compiling the project"
 	mkdir -p bin
-	go build -o bin/${NAME}
+	godep go build -o bin/${NAME}
 
 docker:
 	@echo "--> Building the docker image"
-	sudo docker build -t ${AUTHOR}/${NAME}:${VERSION} .
+	sudo docker build -t docker.io/${AUTHOR}/${NAME}:${VERSION} .
 
 push: docker
 	@echo "--> Pushing the image to docker.io"
-	sudo docker tag -f ${AUTHOR}/${NAME}:${VERSION} docker.io/${AUTHOR}/${NAME}:${VERSION}
 	sudo docker push docker.io/${AUTHOR}/${NAME}:${VERSION}
 
 static:
@@ -72,7 +71,6 @@ cover:
 test: deps
 	@echo "--> Running the tests"
 	go test -v
-	@$(MAKE) vet
 	@$(MAKE) cover
 
 changelog: release

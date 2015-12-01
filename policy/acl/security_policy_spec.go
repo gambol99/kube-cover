@@ -25,18 +25,16 @@ import (
 
 // Conflicts checks if the pod spec violates the security specification
 func (r PodSecurityPolicySpec) Conflicts(pod *api.PodSpec) error {
-	if pod.SecurityContext != nil {
-		// check for host pid
-		if !r.HostPID && pod.SecurityContext.HostPID {
-			return fmt.Errorf("host pid")
-		}
-		// check for host ipc
-		if !r.HostIPC && pod.SecurityContext.HostIPC {
-			return fmt.Errorf("host ipd")
-		}
-		if !r.HostNetwork && pod.SecurityContext.HostNetwork {
-			return fmt.Errorf("host network")
-		}
+	// check for host pid
+	if !r.HostPID && pod.HostPID {
+		return fmt.Errorf("host pid")
+	}
+	// check for host ipc
+	if !r.HostIPC && pod.HostIPC {
+		return fmt.Errorf("host ipd")
+	}
+	if !r.HostNetwork && pod.HostNetwork {
+		return fmt.Errorf("host network")
 	}
 
 	// check the volumes
