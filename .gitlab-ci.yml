@@ -1,0 +1,9 @@
+stages:
+  - building
+
+building:
+  image: gambol99/golang:1.5.1
+  stage: building
+  script:
+    - make test
+    - make
