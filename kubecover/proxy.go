@@ -46,7 +46,6 @@ func (r *KubeCover) proxyHandler(cx *gin.Context) {
 		return
 	}
 
-	glog.V(10).Infof("proxing the request")
 	// step: pass through to the reverse proxy
 	r.proxy.ServeHTTP(cx.Writer, cx.Request)
 }

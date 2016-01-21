@@ -66,7 +66,7 @@ func (r *KubeCover) handlePods(cx *gin.Context) {
 	}
 
 	// step: decode the pod spec
-	pod := new(api.PodSpec)
+	pod := new(api.PodTemplateSpec)
 	content, err := r.decodeInput(cx.Request, pod)
 	if err != nil {
 		glog.Errorf("unable to decode the request body, error: %s", err)
@@ -74,11 +74,15 @@ func (r *KubeCover) handlePods(cx *gin.Context) {
 		return
 	}
 
+	glog.V(10).Infof("authorizating replication controller, namespace: %s, name: %s", context.Namespace, pod.Name)
+
 	// step: validate against the policy
-	if err := r.acl.Authorized(context, pod); err != nil {
+	if err := r.acl.Authorized(context, &pod.Spec); err != nil {
 		r.unauthorizedRequest(cx, content, err.Error())
 		return
 	}
+
+	glog.V(10).Infof("continuing the chain, is aborted: %t", cx.IsAborted())
 }
 
 // unauthorizedRequest sends back a failure to the client

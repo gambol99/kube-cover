@@ -42,10 +42,6 @@ authors:
 	@echo "--> Updating the AUTHORS"
 	git log --format='%aN <%aE>' | sort -u > AUTHORS
 
-deps:
-	@echo "--> Installing build dependencies"
-	@go get -d -v ./... $(DEPS)
-
 vet:
 	@echo "--> Running go tool vet $(VETARGS) ."
 	@go tool vet 2>/dev/null ; if [ $$? -eq 3 ]; then \
@@ -66,11 +62,11 @@ format:
 
 cover:
 	@echo "--> Running go cover"
-	@go test --cover
+	@godep go test --cover
 
-test: deps
-	@echo "--> Running the tests"
-	go test -v
+test:
+	@echo "--> Running go tests"
+	godep go test -v
 	@$(MAKE) cover
 
 changelog: release

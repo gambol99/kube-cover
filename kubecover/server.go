@@ -61,9 +61,9 @@ func NewKubeCover(upstream, policyPath string) (*KubeCover, error) {
 	// step: handle the post operations
 	{
 		podEndpoint := "/api/v1/namespaces/:namespace/pods"
-		router.POST(podEndpoint, service.handlePods, service.handlePods, service.proxyHandler)
-		router.PATCH(podEndpoint, service.handlePods, service.handlePods, service.proxyHandler)
-		router.PUT(podEndpoint, service.handlePods, service.handlePods, service.proxyHandler)
+		router.POST(podEndpoint, service.handlePods, service.proxyHandler)
+		router.PATCH(podEndpoint, service.handlePods, service.proxyHandler)
+		router.PUT(podEndpoint, service.handlePods, service.proxyHandler)
 	}
 	router.Use(service.proxyHandler)
 
