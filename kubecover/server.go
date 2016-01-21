@@ -55,16 +55,23 @@ func NewKubeCover(upstream, policyPath string) (*KubeCover, error) {
 	{
 		replicationEndpoint := "/api/v1/namespaces/:namespace/replicationcontrollers"
 		router.POST(replicationEndpoint, service.handleReplicationController, service.proxyHandler)
-		router.PATCH(replicationEndpoint, service.handleReplicationController, service.proxyHandler)
-		router.PUT(replicationEndpoint, service.handleReplicationController, service.proxyHandler)
+	}
+	{
+		replicationUpdateEndpoint := "/api/v1/namespaces/:namespace/replicationcontrollers/:name"
+		router.PATCH(replicationUpdateEndpoint, service.handleReplicationController, service.proxyHandler)
+		router.PUT(replicationUpdateEndpoint, service.handleReplicationController, service.proxyHandler)
 	}
 	// step: handle the post operations
 	{
 		podEndpoint := "/api/v1/namespaces/:namespace/pods"
 		router.POST(podEndpoint, service.handlePods, service.proxyHandler)
-		router.PATCH(podEndpoint, service.handlePods, service.proxyHandler)
-		router.PUT(podEndpoint, service.handlePods, service.proxyHandler)
 	}
+	{
+		podUpdate := "/api/v1/namespaces/:namespace/pods/:name"
+		router.PATCH(podUpdate, service.handlePods, service.proxyHandler)
+		router.PUT(podUpdate, service.handlePods, service.proxyHandler)
+	}
+
 	router.Use(service.proxyHandler)
 
 	service.engine = router
