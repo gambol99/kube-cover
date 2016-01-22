@@ -19,9 +19,10 @@ package acl
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/golang/glog"
 	"k8s.io/kubernetes/pkg/api"
-	"strings"
 )
 
 // Conflicts validates the pod volumes does not violate the security policy
@@ -33,11 +34,15 @@ func (r VolumeSecurityPolicy) Conflicts(volumes []api.Volume) error {
 	for _, volume := range volumes {
 		glog.V(20).Infof("checking volume %s", volume.Name)
 		if !r.HostPath && volume.HostPath != nil {
-			return fmt.Errorf("hostpath volume, %s", volume.Name)
+			return fmt.Errorf("hostpath volume, %s not permitted", volume.Name)
 		}
 		if r.HostPath && len(r.HostPathAllowed) > 0 && volume.HostPath != nil {
 			passed := false
 			for _, path := range r.HostPathAllowed {
+				if strings.Contains(volume.HostPath.Path, "..") {
+					passed = false
+					break
+				}
 				if strings.HasPrefix(volume.HostPath.Path, path) {
 					passed = true
 					break
