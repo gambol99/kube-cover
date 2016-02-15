@@ -15,9 +15,10 @@ limitations under the License.
 
 */
 
-package acl
+package policy
 
 import (
+	"regexp"
 	"time"
 
 	"k8s.io/kubernetes/pkg/api"
@@ -58,7 +59,7 @@ type PodSecurityPolicy struct {
 	// Namespaces is namespaces the policy is applied to
 	Namespaces []string `json:"namespaces" yaml:"namespaces"`
 	// Spec defines the policy enforced.
-	Spec PodSecurityPolicySpec `json:"spec" yaml:"spec"`
+	Spec *PodSecurityPolicySpec `json:"spec" yaml:"spec"`
 }
 
 // PodSecurityPolicySpec defines the policy enforced.
@@ -66,15 +67,15 @@ type PodSecurityPolicySpec struct {
 	// Privileged determines if a pod can request to be run as privileged.
 	Privileged bool `json:"privileged" yaml:"privileged"`
 	// Capabilities is a list of capabilities that can be added.
-	Capabilities []api.Capability `json:"capabilities" yaml:"capabilities"`
+	Capabilities []*api.Capability `json:"capabilities" yaml:"capabilities"`
 	// Volumes allows and disallows the use of different types of volume plugins.
-	Volumes VolumeSecurityPolicy `json:"volumes" yaml:"volumes"`
+	Volumes *VolumeSecurityPolicy `json:"volumes" yaml:"volumes"`
 	// Images allow or disallows container images
-	Images ImageSecurityPolicy `json:"images" yaml:"images"`
+	Images *ImageSecurityPolicy `json:"images" yaml:"images"`
 	// HostNetwork determines if the policy allows the use of HostNetwork in the pod spec.
 	HostNetwork bool `json:"hostNetwork" yaml:"hostnetwork"`
 	// HostPorts determines which host port ranges are allowed to be exposed.
-	HostPorts []HostPortRange `json:"hostPorts" yaml:"hostports"`
+	HostPorts []*HostPortRange `json:"hostPorts" yaml:"hostports"`
 	// HostPID determines if the policy allows the use of HostPID in the pod spec.
 	HostPID bool `json:"hostPID" yaml:"hostpids"`
 	// HostIPC determines if the policy allows the use of HostIPC in the pod spec.
@@ -100,6 +101,8 @@ type ImageSecurityPolicy struct {
 	Permitted []string `json:"permitted" yaml:"permitted"`
 	// Denied is a series of regexes which are denied
 	Denied []string `json:"denied" yaml:"denied"`
+	// the above converted to regexes
+	matches map[*regexp.Regexp]bool
 }
 
 // VolumeSecurityPolicy allows and disallows the use of different types of volume plugins.
@@ -110,7 +113,7 @@ type VolumeSecurityPolicy struct {
 	HostPathAllowed []string `json:"hostPathAllowed" yaml:"hostpathallowed"`
 	// EmptyDir allows or disallows the use of the EmptyDir volume plugin.
 	// More info: http://releases.k8s.io/HEAD/docs/user-guide/volumes.md#emptydir
-	EmptyDir bool `json:"emptyDir" yaml:"emptydir"`
+	EmptyDir bool `json:"emptyDir" yaml:"emptyDir"`
 	// GCEPersistentDisk allows or disallows the use of the GCEPersistentDisk volume plugin.
 	// More info: http://releases.k8s.io/HEAD/docs/user-guide/volumes.md#gcepersistentdisk
 	GCEPersistentDisk bool `json:"gcePersistentDisk" yaml:"gcepersistentdisk"`
@@ -179,5 +182,5 @@ type PodSecurityPolicyList struct {
 	unversioned.TypeMeta `json:",inline"`
 	unversioned.ListMeta `json:"metadata"`
 
-	Items []PodSecurityPolicy `json:"items" yaml:"items"`
+	Items []*PodSecurityPolicy `json:"items" yaml:"items"`
 }

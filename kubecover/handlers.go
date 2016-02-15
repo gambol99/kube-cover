@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gambol99/kube-cover/policy/acl"
+	"github.com/gambol99/kube-cover/policy"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
@@ -87,7 +87,8 @@ func (r *KubeCover) proxyHandler() gin.HandlerFunc {
 		cx.Next()
 
 		// step: validate the request
-		if !cx.IsAborted() {
+		if cx.IsAborted() {
+			glog.Warningf("refusing to proxy the request as it's been abort: uri: %s", cx.Request.URL.Path)
 			return
 		}
 
@@ -101,6 +102,9 @@ func (r *KubeCover) proxyHandler() gin.HandlerFunc {
 			}
 			return
 		}
+
+		glog.V(15).Infof("proxying on the request, uri: %s", cx.Request.URL.Path)
+
 		r.proxy.ServeHTTP(cx.Writer, cx.Request)
 	}
 }
@@ -119,13 +123,13 @@ func (r KubeCover) unauthorizedRequest(cx *gin.Context, spec, message string) {
 }
 
 // deriveContext gather's additional content for the authorization
-func (r *KubeCover) deriveContext(cx *gin.Context) (*acl.PolicyContext, error) {
+func (r *KubeCover) deriveContext(cx *gin.Context) (*policy.PolicyContext, error) {
 	namespace := cx.Param("namespace")
 	if namespace == "" {
 		return nil, fmt.Errorf("the request has not namespace associated")
 	}
 
-	return &acl.PolicyContext{
+	return &policy.PolicyContext{
 		Namespace: namespace,
 	}, nil
 }

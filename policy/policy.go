@@ -15,7 +15,7 @@ limitations under the License.
 
 */
 
-package acl
+package policy
 
 import (
 	"fmt"
@@ -55,16 +55,18 @@ func (r PodSecurityPolicySpec) Conflicts(pod *api.PodSpec) error {
 	}
 
 	// check the volumes
-	if len(pod.Volumes) > 0 {
+	if r.Volumes != nil && len(pod.Volumes) > 0 {
 		if err := r.Volumes.Conflicts(pod.Volumes); err != nil {
 			return err
 		}
 	}
 
 	// step: check the images
-	for _, c := range pod.Containers {
-		if err := r.Images.Conflicts(c.Image); err != nil {
-			return err
+	if r.Images != nil {
+		for _, c := range pod.Containers {
+			if err := r.Images.Conflicts(c.Image); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -117,9 +119,9 @@ func (r PodSecurityPolicySpec) Conflicts(pod *api.PodSpec) error {
 }
 
 // hasCapability checks if the capability is in the list of capabilities
-func hasCapability(cap api.Capability, caps []api.Capability) bool {
+func hasCapability(cap api.Capability, caps []*api.Capability) bool {
 	for _, c := range caps {
-		if cap == c {
+		if cap == *c {
 			return true
 		}
 	}
@@ -129,15 +131,25 @@ func hasCapability(cap api.Capability, caps []api.Capability) bool {
 
 // Conflicts checks it does not violate the image policy
 func (r ImageSecurityPolicy) Conflicts(image string) error {
-	if len(r.Permitted) > 0 {
+	glog.V(20).Infof("checking image: %s, matchers: %d", image, len(r.matches))
 
+	// step: iterate the regexes and find any matches
+	for matcher, permitted := range r.matches {
+		glog.V(20).Infof("checking image: %s against regexp: %s", image, matcher.String())
+		if matched := matcher.MatchString(image); matched {
+			if permitted {
+				return nil
+			}
+			return fmt.Errorf("image: %s explicitly denied by policy", image)
+		}
+	}
+	glog.V(20).Infof("permitted: %d, denied: %d", len(r.Permitted), len(r.Denied))
+
+	if len(r.Permitted) <= 0 && len(r.Denied) <= 0 {
+		return nil
 	}
 
-	if len(r.Denied) > 0 {
-
-	}
-
-	return nil
+	return fmt.Errorf("image: %s denied by policy", image)
 }
 
 // Conflicts validates the pod volumes does not violate the security policy
@@ -175,31 +187,31 @@ func (r VolumeSecurityPolicy) Conflicts(volumes []api.Volume) error {
 			return fmt.Errorf("cephfs volume: %s", volume.Name)
 		}
 		if !r.Cinder && volume.Cinder != nil {
-			return fmt.Errorf("cephfs volume: %s", volume.Name)
+			return fmt.Errorf("cinder volume: %s", volume.Name)
 		}
 		if !r.DownwardAPI && volume.DownwardAPI != nil {
-			return fmt.Errorf("cephfs volume: %s", volume.Name)
+			return fmt.Errorf("downwardapi volume: %s", volume.Name)
 		}
 		if !r.EmptyDir && volume.EmptyDir != nil {
-			return fmt.Errorf("cephfs volume: %s", volume.Name)
+			return fmt.Errorf("emptydir volume: %s", volume.Name)
 		}
 		if !r.FC && volume.FC != nil {
-			return fmt.Errorf("cephfs volume: %s", volume.Name)
+			return fmt.Errorf("fc volume: %s", volume.Name)
 		}
 		if !r.GCEPersistentDisk && volume.GCEPersistentDisk != nil {
-			return fmt.Errorf("cephfs volume: %s", volume.Name)
+			return fmt.Errorf("gce volume: %s", volume.Name)
 		}
 		if !r.GitRepo && volume.GitRepo != nil {
-			return fmt.Errorf("cephfs volume: %s", volume.Name)
+			return fmt.Errorf("gitrepo volume: %s", volume.Name)
 		}
 		if !r.Glusterfs && volume.Glusterfs != nil {
-			return fmt.Errorf("cephfs volume: %s", volume.Name)
+			return fmt.Errorf("glusterfs volume: %s", volume.Name)
 		}
 		if !r.ISCSI && volume.ISCSI != nil {
 			return fmt.Errorf("isci volume: %s", volume.Name)
 		}
 		if !r.NFS && volume.NFS != nil {
-			return fmt.Errorf("cfs volume: %s", volume.Name)
+			return fmt.Errorf("nfs volume: %s", volume.Name)
 		}
 		if !r.PersistentVolumeClaim && volume.PersistentVolumeClaim != nil {
 			return fmt.Errorf("persistent volume: %s", volume.Name)

@@ -20,17 +20,16 @@ package policy
 import (
 	"sync"
 
-	"github.com/gambol99/kube-cover/policy/acl"
-
 	"github.com/golang/glog"
 	"k8s.io/kubernetes/pkg/api"
+	"strings"
 )
 
 type policyEnforcer struct {
 	// the file container the policies
 	policyFile string
 	// a list of policies
-	policies *acl.PodSecurityPolicyList
+	policies *PodSecurityPolicyList
 	// a lock to guard updating the list
 	policyLock sync.RWMutex
 }
@@ -52,13 +51,16 @@ func NewController(path string) (Controller, error) {
 }
 
 // Authorized validates the pod and parameters are valid
-func (r *policyEnforcer) Authorized(cx *acl.PolicyContext, pod *api.PodSpec) error {
+func (r *policyEnforcer) Authorized(cx *PolicyContext, pod *api.PodSpec) error {
 	glog.Infof("validating the pod spec, namespace: %s", cx.Namespace)
-	for _, p := range r.policies.Items {
+	for i, p := range r.policies.Items {
 		// step: check if the policy matches
 		if match := p.Matches(cx); !match {
 			continue
 		}
+		glog.V(10).Infof("matched the %d policy, namespace: %s in the list", i,
+			strings.Join(p.Namespaces,","))
+
 		// step: check for conflicts
 		if err := p.Spec.Conflicts(pod); err != nil {
 			return err
