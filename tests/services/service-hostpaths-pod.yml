@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: service
+  labels:
+    name: service
+spec:
+  containers:
+  - name: service
+    image: nginx
+    ports:
+    - containerPort: 80
+    - containerPort: 443
+    volumeMounts:
+    - name: service
+      mountPath: /etc/config
+    - name: secrets
+      mountPath: /etc/secrets
+  volumes:
+  - name: vault
+    secret:
+      secretName: vault
+  - name: secrets
+    source:
+      emptyDir: {}
+  - name: service
+    secret:
+      secretName: service
+  - name: bad
+    hostPath:
+      path: /

@@ -21,9 +21,124 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gambol99/kube-cover/utils"
+
 	"github.com/golang/glog"
 	"k8s.io/kubernetes/pkg/api"
 )
+
+// Matches checks to see if the context matches the policy filter
+func (r PodSecurityPolicy) Matches(cx *PolicyContext) bool {
+	// check for wild cards
+	if found := utils.ContainedIn("*", r.Namespaces); found {
+		return true
+	}
+	if found := utils.ContainedIn(cx.Namespace, r.Namespaces); found {
+		return true
+	}
+
+	return false
+}
+
+// Conflicts checks if the pod spec violates the security specification
+func (r PodSecurityPolicySpec) Conflicts(pod *api.PodSpec) error {
+	// check for host pid
+	if !r.HostPID && pod.HostPID {
+		return fmt.Errorf("host pid")
+	}
+	// check for host ipc
+	if !r.HostIPC && pod.HostIPC {
+		return fmt.Errorf("host ipc")
+	}
+	if !r.HostNetwork && pod.HostNetwork {
+		return fmt.Errorf("host network")
+	}
+
+	// check the volumes
+	if len(pod.Volumes) > 0 {
+		if err := r.Volumes.Conflicts(pod.Volumes); err != nil {
+			return err
+		}
+	}
+
+	// step: check the images
+	for _, c := range pod.Containers {
+		if err := r.Images.Conflicts(c.Image); err != nil {
+			return err
+		}
+	}
+
+	// step: iterate each of the container in the pod and verify
+	for _, c := range pod.Containers {
+		// check privileged mode
+		if c.SecurityContext != nil {
+			if c.SecurityContext.Privileged != nil {
+				if c.SecurityContext.Privileged != nil {
+					if !r.Privileged && *c.SecurityContext.Privileged {
+						return fmt.Errorf("privileged mode")
+					}
+				}
+			}
+
+			if c.SecurityContext.Capabilities != nil {
+				for _, cp := range c.SecurityContext.Capabilities.Add {
+					if !hasCapability(cp, r.Capabilities) {
+						return fmt.Errorf("capability %s", cp)
+					}
+				}
+			}
+
+			// check the host network
+			if err := r.RunAsUser.Conflicts(c.SecurityContext); err != nil {
+				return err
+			}
+		}
+
+		// check the host ports
+		hostPorts := len(r.HostPorts)
+		if hostPorts <= 0 {
+			for _, port := range c.Ports {
+				if port.HostPort > 0 {
+					return fmt.Errorf("host port %d", port.HostPort)
+				}
+			}
+		} else {
+			for _, rn := range r.HostPorts {
+				for _, port := range c.Ports {
+					if port.HostPort < rn.Start || port.HostPort > rn.End {
+						return fmt.Errorf("host port %d", port.HostPort)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// hasCapability checks if the capability is in the list of capabilities
+func hasCapability(cap api.Capability, caps []api.Capability) bool {
+	for _, c := range caps {
+		if cap == c {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Conflicts checks it does not violate the image policy
+func (r ImageSecurityPolicy) Conflicts(image string) error {
+	if len(r.Permitted) > 0 {
+
+	}
+
+	if len(r.Denied) > 0 {
+
+	}
+
+	return nil
+}
 
 // Conflicts validates the pod volumes does not violate the security policy
 func (r VolumeSecurityPolicy) Conflicts(volumes []api.Volume) error {
@@ -97,5 +212,10 @@ func (r VolumeSecurityPolicy) Conflicts(volumes []api.Volume) error {
 		}
 	}
 
+	return nil
+}
+
+// Conflicts validate the runas pod specification does not violate the security policies
+func (r RunAsUserStrategyOptions) Conflicts(runas *api.SecurityContext) error {
 	return nil
 }

@@ -54,14 +54,11 @@ func NewController(path string) (Controller, error) {
 // Authorized validates the pod and parameters are valid
 func (r *policyEnforcer) Authorized(cx *acl.PolicyContext, pod *api.PodSpec) error {
 	glog.Infof("validating the pod spec, namespace: %s", cx.Namespace)
-
 	for _, p := range r.policies.Items {
 		// step: check if the policy matches
-		match := p.Matches(cx)
-		if !match {
+		if match := p.Matches(cx); !match {
 			continue
 		}
-
 		// step: check for conflicts
 		if err := p.Spec.Conflicts(pod); err != nil {
 			return err
