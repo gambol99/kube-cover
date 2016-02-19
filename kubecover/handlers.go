@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gambol99/kube-cover/policy/acl"
+	"github.com/gambol99/kube-cover/policy"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
@@ -44,16 +44,13 @@ func (r *KubeCover) handleReplicationController(cx *gin.Context) {
 		return
 	}
 
-	glog.V(10).Infof("authorizating replication controller, namespace: %s, name: %s", context.Namespace,
-		controller.Name)
+	glog.V(10).Infof("authorizating replication controller, namespace: %s, name: %s", context.Namespace, controller.Name)
 
 	// step: validate against the policy
 	if err := r.acl.Authorized(context, &controller.Spec.Template.Spec); err != nil {
 		r.unauthorizedRequest(cx, content, err.Error())
 		return
 	}
-
-	glog.V(10).Infof("continuing the chain, is aborted: %t", cx.IsAborted())
 }
 
 // handlePods handles the changes made to pods
@@ -74,15 +71,42 @@ func (r *KubeCover) handlePods(cx *gin.Context) {
 		return
 	}
 
-	glog.V(10).Infof("authorizating replication controller, namespace: %s, name: %s", context.Namespace, pod.Name)
+	glog.V(10).Infof("authorizating pod, namespace: %s, name: %s", context.Namespace, pod.Name)
 
 	// step: validate against the policy
 	if err := r.acl.Authorized(context, &pod.Spec); err != nil {
 		r.unauthorizedRequest(cx, content, err.Error())
 		return
 	}
+}
 
-	glog.V(10).Infof("continuing the chain, is aborted: %t", cx.IsAborted())
+// proxyHandler proxies the request on to the upstream endpoint
+func (r *KubeCover) proxyHandler() gin.HandlerFunc {
+	return func(cx *gin.Context) {
+		// step: hit the router
+		cx.Next()
+
+		// step: validate the request
+		if cx.IsAborted() {
+			glog.Warningf("refusing to proxy the request as it's been abort: uri: %s", cx.Request.URL.Path)
+			return
+		}
+
+		// step: is this connection upgrading?
+		if isUpgradedConnection(cx.Request) {
+			glog.V(10).Infof("upgrading the connnection to %s", cx.Request.Header.Get("Upgrade"))
+			if err := r.tryUpdateConnection(cx); err != nil {
+				glog.Errorf("unable to upgrade the connection, %s", err)
+				cx.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+
+		glog.V(15).Infof("proxying on the request, uri: %s", cx.Request.URL.Path)
+
+		r.proxy.ServeHTTP(cx.Writer, cx.Request)
+	}
 }
 
 // unauthorizedRequest sends back a failure to the client
@@ -91,22 +115,21 @@ func (r KubeCover) unauthorizedRequest(cx *gin.Context, spec, message string) {
 	glog.Errorf("failing specification: %s", spec)
 
 	// step: inject the header
-	cx.Set(requestUnauthorized, true)
-
 	cx.JSON(http.StatusNotAcceptable, gin.H{
 		"status":  "Failure",
 		"message": "security policy violation, reason: " + message,
 	})
+	cx.Abort()
 }
 
 // deriveContext gather's additional content for the authorization
-func (r *KubeCover) deriveContext(cx *gin.Context) (*acl.PolicyContext, error) {
+func (r *KubeCover) deriveContext(cx *gin.Context) (*policy.PolicyContext, error) {
 	namespace := cx.Param("namespace")
 	if namespace == "" {
 		return nil, fmt.Errorf("the request has not namespace associated")
 	}
 
-	return &acl.PolicyContext{
+	return &policy.PolicyContext{
 		Namespace: namespace,
 	}, nil
 }

@@ -18,13 +18,11 @@ limitations under the License.
 package policy
 
 import (
-	"github.com/gambol99/kube-cover/policy/acl"
-
 	"k8s.io/kubernetes/pkg/api"
 )
 
 // Controller validate a pod specification against the security policies
 type Controller interface {
 	// validate a pod against the policies
-	Authorized(*acl.PolicyContext, *api.PodSpec) error
+	Authorized(*PolicyContext, *api.PodSpec) error
 }

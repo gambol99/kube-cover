@@ -66,7 +66,7 @@ cover:
 
 test:
 	@echo "--> Running go tests"
-	godep go test -v
+	godep go test -v ${DEPS}
 	@$(MAKE) cover
 
 changelog: release

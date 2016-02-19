@@ -29,16 +29,7 @@ spec:
         volumeMounts:
         - name: service
           mountPath: /etc/config
-        - name: secrets
-          mountPath: /etc/secrets
       volumes:
-      - name: vault
-        secret:
-          secretName: vault
       - name: secrets
         source:
           emptyDir: {}
-      - name: service
-        secret:
-          secretName: service
-      

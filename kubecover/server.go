@@ -24,19 +24,25 @@ import (
 
 	"github.com/gambol99/kube-cover/policy"
 
+	"bytes"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"sync"
 )
 
-// NewKubeCover creates a new kube cover service
-func NewKubeCover(upstream, policyPath string) (*KubeCover, error) {
-
-	service := new(KubeCover)
+// NewCover creates a new kube cover service
+func NewCover(upstream, policyPath string) (*KubeCover, error) {
 	// step: parse and validate the upstreams
 	location, err := url.Parse(upstream)
 	if err != nil {
 		return nil, fmt.Errorf("invalid upstrem url, %s", err)
 	}
+
+	service := new(KubeCover)
 	service.upstream = location
 
 	glog.Infof("kubernetes api: %s", service.upstream.String())
@@ -50,29 +56,21 @@ func NewKubeCover(upstream, policyPath string) (*KubeCover, error) {
 
 	// step: create the gin router
 	router := gin.Default()
+	router.Use(service.proxyHandler())
 
 	// step: handle operations related to replication controllers]
-	{
-		replicationEndpoint := "/api/v1/namespaces/:namespace/replicationcontrollers"
-		router.POST(replicationEndpoint, service.handleReplicationController, service.proxyHandler)
-	}
-	{
-		replicationUpdateEndpoint := "/api/v1/namespaces/:namespace/replicationcontrollers/:name"
-		router.PATCH(replicationUpdateEndpoint, service.handleReplicationController, service.proxyHandler)
-		router.PUT(replicationUpdateEndpoint, service.handleReplicationController, service.proxyHandler)
-	}
-	// step: handle the post operations
-	{
-		podEndpoint := "/api/v1/namespaces/:namespace/pods"
-		router.POST(podEndpoint, service.handlePods, service.proxyHandler)
-	}
-	{
-		podUpdate := "/api/v1/namespaces/:namespace/pods/:name"
-		router.PATCH(podUpdate, service.handlePods, service.proxyHandler)
-		router.PUT(podUpdate, service.handlePods, service.proxyHandler)
-	}
+	replicationEndpoint := "/api/v1/namespaces/:namespace/replicationcontrollers"
+	replicationUpdateEndpoint := "/api/v1/namespaces/:namespace/replicationcontrollers/:name"
+	router.POST(replicationEndpoint, service.handleReplicationController)
+	router.PATCH(replicationUpdateEndpoint, service.handleReplicationController)
+	router.PUT(replicationUpdateEndpoint, service.handleReplicationController)
 
-	router.Use(service.proxyHandler)
+	// step: handle the post operations
+	podEndpoint := "/api/v1/namespaces/:namespace/pods"
+	podUpdate := "/api/v1/namespaces/:namespace/pods/:name"
+	router.POST(podEndpoint, service.handlePods)
+	router.PATCH(podUpdate, service.handlePods)
+	router.PUT(podUpdate, service.handlePods)
 
 	service.engine = router
 
@@ -83,11 +81,69 @@ func NewKubeCover(upstream, policyPath string) (*KubeCover, error) {
 	return service, nil
 }
 
+// decodeInput decodes the json payload
+func (r *KubeCover) decodeInput(req *http.Request, data interface{}) (string, error) {
+	// step: read in the content payload
+	content, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		glog.Errorf("unable to read in the content, error: %s", err)
+		return "", err
+	}
+	defer func() {
+		// we need to set the content back
+		req.Body = ioutil.NopCloser(bytes.NewReader(content))
+	}()
+
+	rdr := strings.NewReader(string(content))
+
+	// step: decode the json
+	err = json.NewDecoder(rdr).Decode(data)
+	if err != nil {
+		glog.Errorf("unable to decode the request body, error: %s", err)
+		return "", err
+	}
+
+	return string(content), nil
+}
+
 // Run start the gin engine and begins serving content
 func (r *KubeCover) Run(address, certFile, privateFile string) error {
 	if err := r.engine.RunTLS(address, certFile, privateFile); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// tryUpdateConnection attempt to upgrade the connection to a http pdy stream
+func (r *KubeCover) tryUpdateConnection(cx *gin.Context) error {
+	// step: dial the kubernetes endpoint
+	tlsConn, err := tryDialEndpoint(r.upstream)
+	if err != nil {
+		return err
+	}
+	defer tlsConn.Close()
+
+	// step: we need to hijack the underlining client connection
+	clientConn, _, err := cx.Writer.(http.Hijacker).Hijack()
+	if err != nil {
+
+	}
+	defer clientConn.Close()
+
+	// step: write the request to upstream
+	if err = cx.Request.Write(tlsConn); err != nil {
+		return err
+	}
+
+	// step: copy the date between client and upstream endpoint
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go transferBytes(tlsConn, clientConn, &wg)
+	go transferBytes(clientConn, tlsConn, &wg)
+	wg.Wait()
+
+	glog.V(10).Infof("closing the http stream from upstream and client")
 
 	return nil
 }

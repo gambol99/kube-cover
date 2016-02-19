@@ -20,19 +20,51 @@ package policy
 import (
 	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
-	"github.com/gambol99/kube-cover/policy/acl"
 	"github.com/gambol99/kube-cover/utils"
 )
 
 // parsePolicyFile reads in the policy file
-func parsePolicyFile(path string) (*acl.PodSecurityPolicyList, error) {
+func parsePolicyFile(path string) (*PodSecurityPolicyList, error) {
 	// step: check the file exists
 	if found := utils.FileExists(path); !found {
 		return nil, fmt.Errorf("file %s does not exist", path)
 	}
+
+	// step: check the extension
+	ext := filepath.Ext(path)
+	switch ext {
+	case ".json":
+	case ".yml":
+	case ".yaml":
+	default:
+		return nil, fmt.Errorf("unsupported extension and policy file format")
+	}
+
+	// step: decode the policy
+	policy, err := decodePolicyFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// step: validate and finesse the policy
+	if err := policyValid(policy); err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("IMAGE: %v\n", policy.Items)
+
+	return policy, nil
+}
+
+// decodePolicyFile decodes the policy file
+func decodePolicyFile(path string) (*PodSecurityPolicyList, error) {
+	var err error
+	policy := new(PodSecurityPolicyList)
 
 	// step: read in the content of the file
 	content, err := ioutil.ReadFile(path)
@@ -40,12 +72,19 @@ func parsePolicyFile(path string) (*acl.PodSecurityPolicyList, error) {
 		return nil, err
 	}
 
-	list := new(acl.PodSecurityPolicyList)
-	// step: decode the content json
-	err = json.NewDecoder(strings.NewReader(string(content))).Decode(list)
-	if err != nil {
-		return list, err
+	extension := filepath.Ext(path)
+	switch extension {
+	case ".yaml":
+		fallthrough
+	case ".yml":
+		err = yaml.Unmarshal(content, policy)
+	default:
+		err = json.NewDecoder(strings.NewReader(string(content))).Decode(policy)
 	}
 
-	return list, nil
+	if err != nil {
+		return nil, err
+	}
+
+	return policy, nil
 }

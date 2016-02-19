@@ -20,7 +20,6 @@ package kubecover
 import (
 	"crypto/rand"
 	"crypto/tls"
-	"github.com/golang/glog"
 	"io"
 	"net"
 	"net/http"
@@ -29,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 // buildTransport creates and returns the default transport
